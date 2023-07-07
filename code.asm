@@ -20,8 +20,8 @@ v_DemXung_2 EQU 10 ; dung ra cho nay la 60 de ket hop lai thanh 1 phut, nhung la
 v_ChangeMode EQU 60 ; thoi gian tu dong chuyen mode in ra man hinh; 60 => 3s
 v_DutyCycle		EQU	1 ;neu o day = 2 co nghia la 2 chu ki muc thap roi toi 2 chu ki muc cao (luon = 50%)
 v_DisplayCount		EQU		60 ; so lan in ra cua moi mode, xong thi doi mode
-v_TH0	EQU		0ECh
-v_TL0	EQU		078h
+v_TH0	EQU		0FCh
+v_TL0	EQU		018h
 v_TH1	EQU		03Ch
 v_TL1	EQU		0B0h
 ;====================================================================
