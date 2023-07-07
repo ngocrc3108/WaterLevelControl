@@ -12,14 +12,18 @@ $INCLUDE (8051.MCU)
 ;====================================================================
 ; DEFINITIONS
 ;====================================================================
-v_TimeOutCountDown_empty	EQU	1
-v_TimeOutCountDown_Low_Medium	 EQU	2 ;delay time moi level = 2 phut 
+v_TimeOutCountDown_empty	EQU	255
+v_TimeOutCountDown_Low_Medium	 EQU	255 ;delay time moi level = 2 phut 
 v_BuzzerOutCountDown  EQU 1 ; coi hu 1 phut roi tat 1 phut
 v_DemXung_1 EQU 20 ; 1 xung 50ms => 20 = 1s 
 v_DemXung_2 EQU 10 ; dung ra cho nay la 60 de ket hop lai thanh 1 phut, nhung lau qua giam con 10 de mo phong
 v_ChangeMode EQU 60 ; thoi gian tu dong chuyen mode in ra man hinh; 60 => 3s
 v_DutyCycle		EQU	1 ;neu o day = 2 co nghia la 2 chu ki muc thap roi toi 2 chu ki muc cao (luon = 50%)
 v_DisplayCount		EQU		60 ; so lan in ra cua moi mode, xong thi doi mode
+v_TH0	EQU		0ECh
+v_TL0	EQU		078h
+v_TH1	EQU		03Ch
+v_TL1	EQU		0B0h
 ;====================================================================
 ; VARIABLES
 ;====================================================================
@@ -38,7 +42,7 @@ r_PrintStringIndex			EQU		R5
 b_LCD_RS					EQU		P3.0
 b_LCD_E						EQU		P3.1
 b_Button_1					EQU		P3.2
-b_Xung							EQU		P3.5
+;b_Xung							EQU		P3.5
 b_BuzzerOn				EQU		P3.6 ;bit
 b_MotorControl				EQU		P3.7 ; bit off = 0, on = 1
 b_MotorMode			EQU		01h ;bit: 0 binh thuong, 1 nhanh
@@ -94,10 +98,10 @@ Start:
 		mov	r_DisplayCount,  #v_ChangeMode
         mov IE, #08bh	;cho phep timer0, timer1, ngat ngoai 0
         mov tmod, #11h	;chon che do 1 cho timer 0, chon che do 1 cho timer1.
-		mov TH0, #0ECh	;set gia tri ban dau cho byte cao cua timer0
-		mov TL0, #078h ;set gia tri ban dau cho byte thap cua timer0
-        mov TH1, #02ch	;set gia tri ban dau cho byte cao cua timer0
-        mov TL1, #0b0h ;set gia tri ban dau cho byte thap cua timer0  
+		mov TH0, #v_TH0	;set gia tri ban dau cho byte cao cua timer0
+		mov TL0, #v_TL0 ;set gia tri ban dau cho byte thap cua timer0
+        mov TH1, #v_TH1	;set gia tri ban dau cho byte cao cua timer0
+        mov TL1, #v_TL1 ;set gia tri ban dau cho byte thap cua timer0  
 		setb PT0 ;uu tien ngat timer0
         setb IT0 ;ngat ngoai theo canh
         setb TR1 ;bat timer1.
@@ -211,7 +215,7 @@ jmp Loop
 Delay:
       mov	R6, A
       LoopD0:
-      mov	R7, #225
+      mov	R7, #100
       LoopD1:
       NOP
       djnz	R7, LoopD1
@@ -326,9 +330,9 @@ ret
 ISR_Timer1:
 		push 224
 
-		mov TH1, #03ch	; set gia tri ban dau cho byte cao cua timer1
-		mov  TL1, #0b0h ; set gia tri ban dau cho byte thap cua timer1
-		cpl	b_Xung
+		mov TH1, #v_TH1	;set gia tri ban dau cho byte cao cua timer1
+		mov TL1, #v_TL1 ;set gia tri ban dau cho byte thap cua timer1
+		;cpl	b_Xung
 
 		mov	r_Level, P1 ;cap nhat level
 
@@ -358,8 +362,8 @@ ISR_Timer1:
 reti
 
 ISR_Timer0:
-		mov TH0, #0ECh	; set gia tri ban dau cho byte cao cua timer0
-		mov  TL0, #078h ; set gia tri ban dau cho byte thap cua timer0
+		mov TH0, #v_TH0	;set gia tri ban dau cho byte cao cua timer0
+		mov TL0, #v_TL0 ;set gia tri ban dau cho byte thap cua timer0
 		;dieu kien dong co - bam xung
 		jnb	b_MotorOn, MotorOff  
 		;motor bat, kiem tra mode va bang xung
