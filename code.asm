@@ -12,8 +12,8 @@ $INCLUDE (8051.MCU)
 ;====================================================================
 ; DEFINITIONS
 ;====================================================================
-v_TimeOutCountDown_empty	EQU	255
-v_TimeOutCountDown_Low_Medium	 EQU	255 ;delay time moi level = 2 phut 
+v_TimeOutCountDown_empty	EQU	5
+v_TimeOutCountDown_Low_Medium	 EQU	5 ;delay time moi level = 2 phut 
 v_BuzzerOutCountDown  EQU 1 ; coi hu 1 phut roi tat 1 phut
 v_DemXung_1 EQU 20 ; 1 xung 50ms => 20 = 1s 
 v_DemXung_2 EQU 10 ; dung ra cho nay la 60 de ket hop lai thanh 1 phut, nhung lau qua giam con 10 de mo phong
