@@ -12,9 +12,9 @@ $INCLUDE (8051.MCU)
 ;====================================================================
 ;CONSTANT
 ;====================================================================
-v_TimeOutCountDown_empty	EQU	1 ;10s
-v_TimeOutCountDown_Low_Medium	 EQU	2 ;20s
-v_BuzzerOutCountDown  EQU 1 ; coi hu 1 phut roi tat 1 phut
+v_TimeOutCountDown_empty		EQU	2 ;10s
+v_TimeOutCountDown_Low_Medium	EQU	4 ;20s
+v_BuzzerOutCountDown  			EQU 1 ;còi hú 1 đơn vị thời gian của hệ thống (10s).
 
 ;timer có chu kì là 50ms
 ;định nghĩa 2 biến đếm kết hợp tạo thành 1 đơn vị thời gian cho hệ thống 
@@ -173,65 +173,57 @@ Loop:
 		setb b_TimerCountDownOn ;bật bộ hẹn giờ.
 
 		;so sánh mức cũ và mức hiện tại
+		;level > oldLevel <=> oldLevel < level
 		CheckLevel:
-		mov A, r_Level
+		mov A, OldLevel
+		subb A, r_Level
+		jc	TRUE_1 ;nếu oldLevel < level thì nhảy.
 
-		cjne	A, OldLevel, notEqual_1
-		jmp FALSE_1
-		notEqual_1:
-		jnc TRUE_1	
-		FALSE_1:
-		;neu timeout thi bat coi hu... Neu khong thi nhay ve CheckLevel
+		;oldLevel >= level =================================================
+		;nếu timeout thì bật còi hú, ngược lại nhảy về CheckLevel.
 		jnb b_TimeOut, CheckLevel
-		;timeout, bat coi hu va tat may bom
-		; bat coi hu
+
+		;timeout ===========================================================
+		;bật còi hú
 		clr b_MotorOn
 		setb b_BuzzerOn
-		mov	r_TimeOutCount,  #v_BuzzerOutCountDown  ;set gia cho bo dem
+		mov	r_TimeOutCount,  #v_BuzzerOutCountDown  ;đặt giá trị cho bộ đếm
 		mov	r_DemXung, #v_DemXung
 		mov	r_DemGiay, #v_DemGiay
 		clr	b_TimeOut
-		setb b_TimerCountDownOn ;bat dau dem nguoc
+		setb b_TimerCountDownOn ;bắt đầu hẹn giờ.
 
-		;print "countinue?"
-       ;clear screen
+		;print "countinue?" ================================================
+       	;clear screen
         mov A, #001h
         acall lcd_cmd
 		mov A, #5
 		acall Delay
 
-		clr	b_DisplayOn ;tat che do in level, motor, speed 
-		;in ra dong chu "COUTINUE?"
+		clr	b_DisplayOn ;tắt chế độ in level, motor, speed 
+		;in ra dòng chữ "COUTINUE?"
 		mov	DPTR, #s_COUTINUE 
 		acall PrintString
 
-
-		;wait until buzzer timer out	
-		;CheckBuzzerTimerOut:
-		
-		;jnb	b_TimeOut, CheckBuzzerTimerOut  ;check co time out
-		;clr	b_BuzzerOn
-;		ASK
-
-		clr IE0 ;tat ngat ngoai 0, chuyen nut bam sang hoi coutinue
-		;cho nguoi dung bam tiep tuc de khoi dong lai chuong trinh
+		;ASK ===============================================================
+		clr IE0 ;tắt ngắt ngoài 0, chuyển nút bấm sang chế độ trả lời "COUTINUE?".
+		;chờ người dùng nhấn nút để khởi động lại hệ thống.
 		ASK:
-		;nguoi dung co the tat coi som
+		;người dùng có thể nhấn nút để tắt còi sớm (hoặc còi tự tắt sau 10s).
 		jnb	b_TimeOut, ChuaTatCoi
 		clr b_BuzzerOn
 		ChuaTatCoi:
 		jb	b_Button_1, ASK
-		;nguoi dung muon tiep tuc, bat lai cho phep ngat, tat coi va nhay ve Loop
-		clr b_BuzzerOn	;tat coi som neu nguoi dung bam tiep tuc truoc khi time out.
-		setb	IE0 ;bat lai ngat ngoai 0 (normal/high speed)
+		;người dùng muốn tiếp tục, bật lại cho phép ngắt, tắt còi và nhảy về Loop.
+		clr b_BuzzerOn	;tắt còi sớm nếu người dùng bấm tiếp tục.
+		setb	IE0 ;bật lại ngắt ngoài 0 (normal/high speed).
 		jmp Loop
 		TRUE_1:
-		;if level = 111b thi tat may bom, neu khong thi nhay ve Label_1
+		;nếu level = 7 (high) thì ngừng máy bơm và nhảy về Loop.
+		;nếu khác high thì nhảy về Label_1 (so sánh oldLevel và level).
 		cjne	r_Level, #7, Label_1
 		;tat may bom sau do nhay ve Loop
 		clr b_MotorOn
-		jmp Loop
-		EXIT_1:
 jmp Loop
 
 Delay:
