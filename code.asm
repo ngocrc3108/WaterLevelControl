@@ -10,53 +10,68 @@ $NOMOD51
 $INCLUDE (8051.MCU)
 
 ;====================================================================
-; DEFINITIONS
+;CONSTANT
 ;====================================================================
 v_TimeOutCountDown_empty	EQU	1 ;10s
 v_TimeOutCountDown_Low_Medium	 EQU	2 ;20s
 v_BuzzerOutCountDown  EQU 1 ; coi hu 1 phut roi tat 1 phut
-v_DemXung_1 EQU 20 ; 1 xung 50ms => 20 = 1s 
-v_DemXung_2 EQU 10 ; dung ra cho nay la 60 de ket hop lai thanh 1 phut, nhung lau qua giam con 10 de mo phong
-v_ChangeMode EQU 60 ; thoi gian tu dong chuyen mode in ra man hinh; 60 => 3s
-v_DutyCycle		EQU	1 ;neu o day = 2 co nghia la 2 chu ki muc thap roi toi 2 chu ki muc cao (luon = 50%)
-v_DisplayCount		EQU		60 ; so lan in ra cua moi mode, xong thi doi mode
-v_TH0	EQU		0FCh
-v_TL0	EQU		018h
-v_TH1	EQU		03Ch
-v_TL1	EQU		0B0h
+
+;timer có chu kì là 50ms
+;định nghĩa 2 biến đếm kết hợp tạo thành 1 đơn vị thời gian cho hệ thống 
+;(thực tế là 1 phút, nhưng để dễ mô phỏng giảm còn 10s).
+v_DemXung			EQU 20 ;1 xung 50ms => 20 xung = 1s 
+v_DemGiay			EQU 10 ;đúng ra chỗ này là 60s (1 đơn vị thời gian của hệ thống), nhưng đê dễ mô phỏng giảm còn 10.
+v_DisplayCount		EQU 60 ;số lần in ra của mỗi mode. mỗi lần in cách nhau 50ms, vậy 60 <=> 3s
+v_TH0				EQU 0FCh
+v_TL0				EQU 018h
+v_TH1				EQU 03Ch
+v_TL1				EQU 0B0h
+
 ;====================================================================
 ; VARIABLES
 ;====================================================================
+
 ;register
-;bank 0
-r_Level							EQU		R0
-r_TimeOutCount			EQU		R1
-r_DemXung_1				EQU		R2
-r_DemXung_2				EQU		R3
-r_DisplayCount					EQU		R4
-r_PrintStringIndex			EQU		R5
-;bank 1
-; R6 R7 da dung cho ham delay
+;====================================================================
+r_Level				EQU		R0
+r_TimeOutCount		EQU		R1
+r_DemXung			EQU		R2
+r_DemGiay			EQU		R3
+r_DisplayCount		EQU		R4
+r_PrintStringIndex	EQU		R5
+;R6 R7 đã dùng cho hàm delay
 
 ;RAM - bit
-b_LCD_RS					EQU		P3.0
-b_LCD_E						EQU		P3.1
-b_Button_1					EQU		P3.2
-;b_Xung							EQU		P3.5
-b_BuzzerOn				EQU		P3.6 ;bit
-b_MotorControl				EQU		P3.7 ; bit off = 0, on = 1
-b_MotorMode			EQU		01h ;bit: 0 binh thuong, 1 nhanh
-b_DisplayOn		EQU	02h;tat bit nay khi in ra "COUTINUE"
-b_DisplayMode				EQU		3h ;bit: 0 hien thi level va motor bat hay tat, 1 hien thi toc do cua motor
-b_TimeOut				EQU		04h ;bit
-b_TimerCountDownOn 	EQU		05h; khi co nay bat len thi bat dau dem nguoc bien timeOutCount
-;b_StartBuzzerOutCountDown 	EQU		05h; khi co nay bat len thi bat dau dem nguoc bien BuzzerTimerOutCount	
-b_MotorOn				EQU		06h ; bit off = 0, on = 1
+;====================================================================
+b_LCD_RS				EQU		P3.0
+b_LCD_E					EQU		P3.1
+b_Button_1				EQU		P3.2 ;chân nối với nút nhấn.
+b_BuzzerOn				EQU		P3.6 ;chân điều khiển còi báo.
+b_MotorControl			EQU		P3.7 ;chân điều khiển motor.
+b_MotorMode				EQU		01h ;0: normal. 1: high.
+
+;bit bật tắt chế dộ hiển thị level, trạng thái và tốc độ của motor.
+;tắt khi ở chế độ hiển thị "COUTINUE".
+b_DisplayOn				EQU		02h
+
+b_DisplayMode			EQU		3h ;chế độ hiển thị của lcd. 0: level + on/off. 1: speed.
+b_TimeOut				EQU		04h ;cờ báo timeout.
+
+;cờ kích hoạt chế độ hẹn giờ cho timer.
+;Lưu ý timer trong hệ thống có nhiều mục đích sử dụng. hẹn giờ là 1 trong số đó.
+b_TimerCountDownOn 		EQU		05h 
+
+;bit bật tắt motor. Khác với b_MotorControl (chân điều khiển động cơ). 
+;ví dụ khi motor bật b_MotorOn = 1, nhưng do băm xung nên b_MotorControl đảo liên tục.
+b_MotorOn				EQU		06h
+
 ;RAM - byte
 OldLevel						EQU		30h
+
 ;====================================================================
-; RESET and INTERRUPT VECTORS
+; STRINGS
 ;====================================================================
+;dùng kí tự '\' làm kí tự kết thúc chuỗi.
 org	800h
 s_LEVEL:	DB	"LEVEL: \"
 s_HIGH:	DB	"HIGH\"
@@ -70,44 +85,49 @@ s_ERROR:	DB	"ERROR\"
 s_Speed:		DB		"SPEED: \"    
 s_NORMAL:		DB	"NORMAL\"
 s_COUTINUE:	DB	"COUTINUE?\"
-      ; Reset Vector
-      org   0000h
-      jmp   Start
-      org	000bh
-      jmp	ISR_Timer0
-      org	001bh
-      jmp	ISR_Timer1
-      org	003h
-      jmp	NgatNgoai0
+
+;====================================================================
+; RESET and INTERRUPT VECTORS
+;====================================================================
+		org   0000h
+		jmp   Start
+		org	000bh
+		jmp	ISR_Timer0
+		org	001bh
+		jmp	ISR_Timer1
+		org	003h
+		jmp	NgatNgoai0
+
 ;====================================================================
 ; CODE SEGMENT
 ;====================================================================
 
-      org   0100h
-Start:	
-		mov P1, #0
-		mov SP, #50h ;
-;cho nay khong thua, neu xoa di khoi khoi dong coi se hu 1 ti.
+org   0100h
+	Start:	
+		mov P1, #0	
+		mov SP, #50h ;khởi tạo địa chỉ ban đầu cho stack.
+		;chỗ này không thừa, nếu xóa đi lúc khởi động còi sẽ bị hú 1 tí.
 		clr b_MotorOn
 		clr b_BuzzerOn
 		clr b_TimeOut
-		setb	b_DisplayOn
+		setb b_DisplayOn
 
-		mov	r_DemXung_1, #v_DemXung_1
-		mov	r_DemXung_2, #v_DemXung_2
-		mov	r_DisplayCount,  #v_ChangeMode
-        mov IE, #08bh	;cho phep timer0, timer1, ngat ngoai 0
-        mov tmod, #11h	;chon che do 1 cho timer 0, chon che do 1 cho timer1.
-		mov TH0, #v_TH0	;set gia tri ban dau cho byte cao cua timer0
-		mov TL0, #v_TL0 ;set gia tri ban dau cho byte thap cua timer0
-        mov TH1, #v_TH1	;set gia tri ban dau cho byte cao cua timer0
-        mov TL1, #v_TL1 ;set gia tri ban dau cho byte thap cua timer0  
-		setb PT0 ;uu tien ngat timer0
-        setb IT0 ;ngat ngoai theo canh
-        setb TR1 ;bat timer1.
-        setb TR0 ;bat timer0.
-        ;Function to prepare the LCD  and get it ready
-        ;for using 2 lines and 5X7 matrix of LCD
+		mov	r_DemXung, #v_DemXung
+		mov	r_DemGiay, #v_DemGiay
+		mov	r_DisplayCount, #v_DisplayCount
+        mov IE, #08bh	;cho phép ngắt ngoài 0, timer0, timer1.
+        mov tmod, #11h	;chọn chế độ 1 cho timer 0 và timer 1.
+		mov TH0, #v_TH0	;đặt giá trị ban đầu cho byte cao của timer0
+		mov TL0, #v_TL0 ;đặt giá trị ban đầu cho byte thấp của timer0
+        mov TH1, #v_TH1	;đặt giá trị ban đầu cho byte cao của timer1
+        mov TL1, #v_TL1 ;đặt giá trị ban đầu cho byte thấp của timer1
+		setb PT0 ;ưu tiên ngắt timer0
+        setb IT0 ;ngắt ngoài theo cạnh
+        setb TR1 ;bật timer1.
+        setb TR0 ;bật timer0.
+
+		;khởi tạo cho lcd
+		;====================================================================
         mov A, #038h
         acall lcd_cmd
         acall	Delay
@@ -129,31 +149,33 @@ Loop:
 		clr b_TimerCountDownOn
 		setb	b_DisplayOn
 		isLevel0:
-		;acall Display
-		; if level != 0 check again, if equal 0 then do the true branch
+		; nếu level !0 thì kiểm tra lại, ngược lại thì thực hiện phần giải thuật khi level = 0.
 		mov	A, r_Level
 		jnz	isLevel0  ;level != 0, check again
-		; level = 0 branch		
-		setb b_MotorOn ;turn motor on
-		; oldLevel = level
+
+		; level = 0 	
+		;====================================================================	
+		setb b_MotorOn ;bật máy bơm.
+
 		Label_1:
 		mov	OldLevel, r_Level
 		
-		;start timer to count
+		;kiểm tra level và hẹn giờ tương ứng (empty: 20s, mức khác 40s).
 		cjne	r_Level, #0, LevelNotEmpty
 		mov r_TimeOutCount, #v_TimeOutCountDown_empty
 		jmp setTimeOut
 		LevelNotEmpty:
 		mov r_TimeOutCount, #v_TimeOutCountDown_Low_Medium
 		setTimeOut:
-		mov	r_DemXung_1, #v_DemXung_1
-		mov	r_DemXung_2, #v_DemXung_2
+		mov	r_DemXung, #v_DemXung
+		mov	r_DemGiay, #v_DemGiay
 		clr	b_TimeOut
-		setb	b_TimerCountDownOn
+		setb b_TimerCountDownOn ;bật bộ hẹn giờ.
 
-		; oldLevel < Level
+		;so sánh mức cũ và mức hiện tại
 		CheckLevel:
 		mov A, r_Level
+
 		cjne	A, OldLevel, notEqual_1
 		jmp FALSE_1
 		notEqual_1:
@@ -166,8 +188,8 @@ Loop:
 		clr b_MotorOn
 		setb b_BuzzerOn
 		mov	r_TimeOutCount,  #v_BuzzerOutCountDown  ;set gia cho bo dem
-		mov	r_DemXung_1, #v_DemXung_1
-		mov	r_DemXung_2, #v_DemXung_2
+		mov	r_DemXung, #v_DemXung
+		mov	r_DemGiay, #v_DemGiay
 		clr	b_TimeOut
 		setb b_TimerCountDownOn ;bat dau dem nguoc
 
@@ -345,16 +367,16 @@ ISR_Timer1:
 
 		;phan chuc nang countdown
 		jnb b_TimerCountDownOn, NotCountDown  ;kiem tra xem co can dem nguoc hay khong.
-		djnz	r_DemXung_1, notSecond
-		djnz	r_DemXung_2, notMinute
+		djnz	r_DemXung, notSecond
+		djnz	r_DemGiay, notMinute
 		;minute is here
 		djnz	r_TimeOutCount, notTimeOut
 		setb	b_TimeOut ;dem xong, bat co time out
 		clr b_TimerCountDownOn  ;xoa co nay, tat khong dem o chu ki sau
 		notTimeOut:
-		mov	r_DemXung_2, #v_DemXung_2
+		mov	r_DemGiay, #v_DemGiay
 		notMinute:
-		mov	r_DemXung_1, #v_DemXung_1
+		mov	r_DemXung, #v_DemXung
 		notSecond:
 		NotCountDown:
 
