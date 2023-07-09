@@ -227,41 +227,40 @@ Loop:
 jmp Loop
 
 Delay:
-      mov	R6, A
-      LoopD0:
-      mov	R7, #100
-      LoopD1:
-      NOP
-      djnz	R7, LoopD1
-      NOP
-      djnz	R6, LoopD0
-      ret
+		mov	R6, A
+		LoopD0:
+		mov	R7, #100
+		LoopD1:
+		NOP
+		djnz	R7, LoopD1
+		NOP
+		djnz	R6, LoopD0
+		ret
 
 lcd_cmd:
-		push 224 ;luu gia tri cua thanh ghi A vao stack
-      mov	P2, A
-      clr	b_LCD_RS
-      setb	b_LCD_E
+		push 224 ;lưu giá trị của thanh ghi A vào stack
+		mov	P2, A
+		clr	b_LCD_RS
+		setb	b_LCD_E
 		mov A, #1
-      acall Delay
-      clr	b_LCD_E
-		pop 224 ;phuc hoi gia tri ban dau cua A
-      ret
+		acall Delay
+		clr	b_LCD_E
+		pop 224 ;phục hồi lại giá trị của A
+		ret
 
 lcd_data:
-		push 224 ;luu gia tri cua thanh ghi A vao stack
-      mov	P2, A
-      setb	b_LCD_RS
-      setb	b_LCD_E
+		push 224 ;lưu giá trị của thanh ghi A vào stack
+		mov	P2, A
+		setb	b_LCD_RS
+		setb	b_LCD_E
 		mov A, #1
-      acall Delay
-      clr	b_LCD_E
-		pop 224 ;phuc hoi gia tri ban dau cua A
-      ret
+		acall Delay
+		clr	b_LCD_E
+		pop 224 ;phục hồi lại giá trị của A
+		ret
 
 Display:
-;push cac thanh ghi vao stack
-		push 224 ; day thanh ghi A vao stack
+		push 224 ;lưu giá trị của thanh ghi A vào stack
         ;clear screen
         mov A, #001h
         acall lcd_cmd
@@ -270,7 +269,8 @@ Display:
 		acall Delay
 
 		jb	b_DisplayMode, DisplayMode1
-		;mode 0, in ra level hien tai
+		;mode 0 ==============================================
+		;in ra level hiện tại.
 		mov	DPTR, #s_LEVEL
 		lcall	PrintString
 		mov A, r_Level
@@ -294,8 +294,8 @@ Display:
 		Print_1:
 		acall	PrintString
 
-		;in ra trang thai cua motor
-        mov A, #0c0h ;xuong dong
+		;in ra trạng thái của motor
+        mov A, #0c0h ;kí tự xuống dòng
         acall lcd_cmd
 		mov A, #5
 		acall Delay		
@@ -310,8 +310,8 @@ Display:
 		acall PrintString
 		jmp	ExitDisplay
 
-		;in ra toc do cua motor
 		DisplayMode1:
+		;in ra tốc độ của motor ==============================
 		mov DPTR, #s_SPEED
 		acall PrintString
 		jb	b_MotorMode, HighSpeed
@@ -323,8 +323,8 @@ Display:
 		Print_3:
 		acall PrintString
 		ExitDisplay:
-;phuc hoi cac thanh ghi
-		pop 224 ;Khoi phuc lai thanh ghi A
+
+		pop 224 ;Khôi phục thanh ghi A
 ret
 
 PrintString:
@@ -344,56 +344,57 @@ ret
 ISR_Timer1:
 		push 224
 
-		mov TH1, #v_TH1	;set gia tri ban dau cho byte cao cua timer1
-		mov TL1, #v_TL1 ;set gia tri ban dau cho byte thap cua timer1
+		mov TH1, #v_TH1	;đặt giá trị đếm ban đầu cho byte cao của timer1.
+		mov TL1, #v_TL1 ;đặt giá trị đếm ban đầu cho byte thấp của timer1.
 		;cpl	b_Xung
 
-		mov	r_Level, P1 ;cap nhat level
+		mov	r_Level, P1 ;cập nhật level.
 
-		jnb	b_DisplayOn, KhongDoiDisplayMode  ;khi b_DisplayOn = 0, man hinh dang hien thi "COUTINUE"   nen khong dao mode
-		acall Display
+		jnb	b_DisplayOn, KhongDoiDisplayMode ;khi b_DisplayOn = 0, màn hình đang hiển thị "COUTINUE?" nên không đổi mode.
+		acall Display ;gọi hàm hiển thị
 		djnz	r_DisplayCount, KhongDoiDisplayMode
 		cpl	b_DisplayMode
 		mov	r_DisplayCount,  #v_DisplayCount
 		KhongDoiDisplayMode:
 
-		;phan chuc nang countdown
-		jnb b_TimerCountDownOn, NotCountDown  ;kiem tra xem co can dem nguoc hay khong.
+		;phần chức năng hẹn giờ (timer).
+		jnb b_TimerCountDownOn, NotCountDown  ;kiểm tra xem có đang hẹn giờ hay không.
+		;đang hẹn giờ ================================================
 		djnz	r_DemXung, notSecond
 		djnz	r_DemGiay, notMinute
 		;minute is here
 		djnz	r_TimeOutCount, notTimeOut
-		setb	b_TimeOut ;dem xong, bat co time out
-		clr b_TimerCountDownOn  ;xoa co nay, tat khong dem o chu ki sau
+		setb	b_TimeOut ;đếm xong, bật cờ timeout
+		clr b_TimerCountDownOn  ;xóa cờ bật hẹn giờ, không đếm ở chu kì sau.
 		notTimeOut:
 		mov	r_DemGiay, #v_DemGiay
 		notMinute:
 		mov	r_DemXung, #v_DemXung
 		notSecond:
 		NotCountDown:
-
 		pop 224
 reti
 
 ISR_Timer0:
-		mov TH0, #v_TH0	;set gia tri ban dau cho byte cao cua timer0
-		mov TL0, #v_TL0 ;set gia tri ban dau cho byte thap cua timer0
-		;dieu kien dong co - bam xung
+		mov TH0, #v_TH0	;đặt giá trị đếm ban đầu cho byte cao của timer1.
+		mov TL0, #v_TL0 ;đặt giá trị đếm ban đầu cho byte thấp của timer1.
+		;điều khiển băm xung =========================================
+		;mặc định xung 50% cho tốc độ normal, 100% cho high ==========
 		jnb	b_MotorOn, MotorOff  
-		;motor bat, kiem tra mode va bang xung
+		;motor bật, kiểm tra mode và băm xung.
 		jb	b_MotorMode, HighSpeedMode
-		cpl	b_MotorControl
+		cpl	b_MotorControl ;băm xung 50%
 		jmp	ExitISR_Timer0
 		HighSpeedMode:
-		setb	b_MotorControl
+		setb	b_MotorControl ;băm xung 100%
 		jmp	ExitISR_Timer0
 		MotorOff:
-		clr b_MotorControl
+		clr b_MotorControl ;tắt motor.
 		ExitISR_Timer0:
 reti
 
 NgatNgoai0:
-		cpl	b_MotorMode
+		cpl	b_MotorMode ;đảo mode.
 reti
 ;====================================================================
       END
