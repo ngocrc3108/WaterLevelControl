@@ -74,18 +74,18 @@ OldLevel				EQU		30h
 ;====================================================================
 ;dùng kí tự '\' làm kí tự kết thúc chuỗi.
 org	800h
-s_LEVEL:	DB	"LEVEL: \"
-s_HIGH:	DB	"HIGH\"
-s_LOW: 	DB	"LOW\"
-s_MEDIUM:	DB	"MEDIUM\"
+s_LEVEL:		DB	"LEVEL: \"
+s_HIGH:			DB	"HIGH\"
+s_LOW: 			DB	"LOW\"
+s_MEDIUM:		DB	"MEDIUM\"
 s_EMPTY:		DB	"EMPTY\"
-s_MOTOR:	DB	"MOTOR: \"
-s_ON:	DB	"ON\"
-s_OFF:		DB	"OFF\"
-s_ERROR:	DB	"ERROR\"
+s_MOTOR:		DB	"MOTOR: \"
+s_ON:			DB	"ON\"
+s_OFF:			DB	"OFF\"
+s_ERROR:		DB	"ERROR\"
 s_Speed:		DB		"SPEED: \"    
 s_NORMAL:		DB	"NORMAL\"
-s_COUTINUE:	DB	"COUTINUE?\"
+s_COUTINUE:		DB	"COUTINUE?\"
 
 ;====================================================================
 ; RESET and INTERRUPT VECTORS
